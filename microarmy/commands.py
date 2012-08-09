@@ -19,8 +19,6 @@ from microarmy.firepower import (init_cannons,
                                  reboot_cannons,
                                  setup_cannons,
                                  slam_host,
-                                 setup_siege,
-                                 setup_siege_urls,
                                  find_deployed_cannons,
                                  destroy_deployed_cannons)
 
@@ -35,8 +33,8 @@ class CommandCenter(cmd.Cmd):
         self._cannon_hosts = None
         self._cannon_infos = None
         self._bypass_urls = False
-        self._siege_urls = settings.siege_urls or None
-        self._siege_config = settings.siege_config or None
+        # self._siege_urls = settings.siege_urls or None
+        # self._siege_config = settings.siege_config or None
         self.prompt = 'microarmy> '
 
     def default(self, line):
@@ -103,10 +101,7 @@ class CommandCenter(cmd.Cmd):
         deploy:       Deploys N cannons
         setup:        Runs the setup functions on each host
         config:       Allows a user to specify existing cannons
-        config_siege: Create siege config from specified dictionary
-        siege_urls:   Specify list of URLS to test against
-        single_url:   Only hit one url when firing off your next test
-        all_urls:     Revert to using configured urls (turns off single_url)
+        find_cannons  Find deployed cannons, add them to your hosts
         fire:         Asks for a url and then fires the cannons
         mfire:        Runs `fire` multiple times and aggregates totals
         term:         Terminate cannons
@@ -147,19 +142,19 @@ class CommandCenter(cmd.Cmd):
         self._cannon_hosts = [h[1] for h in self._cannon_infos]
         status = setup_cannons(self._cannon_hosts)
 
-        if self._siege_config:
-            if self._write_siege_config(self._siege_config):
-                print 'Siege config written, deploying to cannons'
-                setup_siege(self._cannon_hosts)
-            else:
-                print 'ERROR: Cannot write new siege config'
+        # if self._siege_config:
+        #     if self._write_siege_config(self._siege_config):
+        #         print 'Siege config written, deploying to cannons'
+        #         setup_siege(self._cannon_hosts)
+        #     else:
+        #         print 'ERROR: Cannot write new siege config'
 
-        if self._siege_urls:
-            if self._write_siege_urls(self._siege_urls):
-                print 'Siege urls written, deploying to cannons'
-                setup_siege_urls(self._cannon_hosts)
-            else:
-                print 'ERROR: Cannot write urls'
+        # if self._siege_urls:
+        #     if self._write_siege_urls(self._siege_urls):
+        #         print 'Siege urls written, deploying to cannons'
+        #         setup_siege_urls(self._cannon_hosts)
+        #     else:
+        #         print 'ERROR: Cannot write urls'
 
         print 'Finished setup - time: %s' % (time.time()-start_time)
 
@@ -167,53 +162,53 @@ class CommandCenter(cmd.Cmd):
         reboot_cannons([h[0] for h in self._cannon_infos])
         self._cannons_deployed = True
 
-    def do_config_siege(self, line):
-        """Create siege config, deploy it to cannons"""
-        if self._cannons_deployed:
-            if self._siege_config:
-                print '  Siege config detected in settings and will be automatically deployed with "setup"'
-                answer = raw_input('  Continue? (y/n) ')
-                if answer.lower() == 'n':
-                   return
+    # def do_config_siege(self, line):
+    #     """Create siege config, deploy it to cannons"""
+    #     if self._cannons_deployed:
+    #         if self._siege_config:
+    #             print '  Siege config detected in settings and will be automatically deployed with "setup"'
+    #             answer = raw_input('  Continue? (y/n) ')
+    #             if answer.lower() == 'n':
+    #                return
 
-            siegerc = raw_input('  Enter siege config data: ')
-            if self._write_siege_config(eval(siegerc)):
-                print '  Siege config written, deploying to cannons'
-                setup_siege(self._cannon_hosts)
-                self._siege_config = eval(siegerc)
-            else:
-                print 'ERROR: Cannot write new siege config'
-        else:
-            print 'ERROR: Cannons not deployed yet'
+    #         siegerc = raw_input('  Enter siege config data: ')
+    #         if self._write_siege_config(eval(siegerc)):
+    #             print '  Siege config written, deploying to cannons'
+    #             setup_siege(self._cannon_hosts)
+    #             self._siege_config = eval(siegerc)
+    #         else:
+    #             print 'ERROR: Cannot write new siege config'
+    #     else:
+    #         print 'ERROR: Cannons not deployed yet'
 
-    def do_siege_urls(self, line):
-        """Create siege urls file, deploy it to cannons"""
-        if self._cannons_deployed:
-            if self._siege_urls:
-                print '  Urls detected in settings and will be automatically deployed with "setup"'
-                answer = raw_input('  Continue? (y/n) ')
-                if answer == 'n':
-                   return
+    # def do_siege_urls(self, line):
+    #     """Create siege urls file, deploy it to cannons"""
+    #     if self._cannons_deployed:
+    #         if self._siege_urls:
+    #             print '  Urls detected in settings and will be automatically deployed with "setup"'
+    #             answer = raw_input('  Continue? (y/n) ')
+    #             if answer == 'n':
+    #                return
 
-            siege_urls = raw_input('  Enter urls: ')
-            if self._write_siege_urls(eval(siege_urls)):
-                print 'Urls written, deploying to cannons'
-                setup_siege_urls(self._cannon_hosts)
-                self._siege_urls = eval(siege_urls)
-            else:
-                print 'ERROR: Cannot write new urls'
-        else:
-            print 'ERROR: Cannons not deployed yet'
+    #         siege_urls = raw_input('  Enter urls: ')
+    #         if self._write_siege_urls(eval(siege_urls)):
+    #             print 'Urls written, deploying to cannons'
+    #             setup_siege_urls(self._cannon_hosts)
+    #             self._siege_urls = eval(siege_urls)
+    #         else:
+    #             print 'ERROR: Cannot write new urls'
+    #     else:
+    #         print 'ERROR: Cannons not deployed yet'
 
-    def do_single_url(self, line):
-        """Bypass configured urls, allowing to specify one dynamically"""
-        self._bypass_urls = True
-        print 'Bypassing configured urls'
+    # def do_single_url(self, line):
+    #     """Bypass configured urls, allowing to specify one dynamically"""
+    #     self._bypass_urls = True
+    #     print 'Bypassing configured urls'
 
-    def do_all_urls(self, line):
-        """Disable 'single_url' mode"""
-        self._bypass_urls = False
-        print 'Using configured urls'
+    # def do_all_urls(self, line):
+    #     """Disable 'single_url' mode"""
+    #     self._bypass_urls = False
+    #     print 'Using configured urls'
 
     def do_status(self, line):
         """Get information about current cannons, siege configs and urls"""
@@ -224,11 +219,11 @@ class CommandCenter(cmd.Cmd):
             iid, ihost = [h for h in host]
             print '  Cannon: %s:%s' %(iid, ihost)
 
-        print '\n  Last written siege config: '
-        print '  %s' % self._siege_config
+        # print '\n  Last written siege config: '
+        # print '  %s' % self._siege_config
 
-        print '\n  Last written urls: '
-        print '  %s' % self._siege_urls
+        # print '\n  Last written urls: '
+        # print '  %s' % self._siege_urls
 
     def do_config(self, line, cannon_data=None):
         """Allows a user to specify existing cannons"""
@@ -265,30 +260,15 @@ class CommandCenter(cmd.Cmd):
     def do_fire(self, line):
         """Fires the cannons, asks for URL if none are defined in settings"""
         if self._cannons_deployed:
-            if self._siege_urls and not self._bypass_urls:
-                report = slam_host(self._cannon_hosts, None)
-            else:
-                target = raw_input('  target: ')
-                if target != '':
-                    report = slam_host(self._cannon_hosts, target)
-                else:
-                    print 'ERROR: No target specified'
-                    return
+            report = slam_host(self._cannon_hosts)
 
-            if isinstance(report, str):
-                print report
-                return
+            # if isinstance(report, str):
+            #     print report
+            #     return_status
 
             ### Ad-hoc CSV
             print 'Results ]------------------'
-            print 'Num_Trans,Elapsed,Tran_Rate'
-            total_trans = 0
-            for idx in xrange(len(report['num_trans'])):
-                total_trans = total_trans + int(report['num_trans'][idx])
-                print '%s,%s,%s' % (report['num_trans'][idx],
-                                    report['elapsed'][idx],
-                                    report['tran_rate'][idx])
-            print 'Total:', total_trans
+            print report
         else:
             print 'ERROR: Cannons not deployed yet'
 

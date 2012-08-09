@@ -1,7 +1,6 @@
 import eventlet
 import boto
 import time
-import os
 import yaml
 
 from microarmy.communications import (
@@ -23,6 +22,8 @@ from settings import (
     enable_cloud_init,
     env_scripts_dir,
     ec2_ssh_username,
+    cannon_init_script,
+    cannon_projectile_script
 )
 
 pool = eventlet.GreenPool()
@@ -32,6 +33,7 @@ class UnparsableData(Exception):
 
     def __init__(self, value):
         self.data = value
+
     def __str__(self):
         return repr(self.data)
 
@@ -39,14 +41,13 @@ class UnparsableData(Exception):
 ### Cannon functions
 ###
 
-CANNON_INIT_SCRIPT = 'build_cannon.sh'
-SIEGE_CONFIG = 'siegerc'
-URLS = 'urls.txt'
-CLOUD_INIT_DATA ={
+CANNON_INIT_SCRIPT = cannon_init_script
+CANNON_PROJECTILE_SCRIPT = cannon_projectile_script
+CLOUD_INIT_DATA = {
     'apt_update': True,
-    'packages':['siege'],
-        #'python-dev', 'build-essential', 'autoconf', 'automake', 'libtool',
-        #'uuid-dev', 'git-core', 'mercurial', 'python-pip'],
+    'packages': ['nodejs'],
+        #['build-essential', 'autoconf', 'automake', 'libtool',
+        #'uuid-dev', 'git-core'],
     'runcmd': [
         ['bash', '-c', 'echo fs.file-max = 1000000 | tee -a /etc/sysctl.conf'],
         ['bash', '-c', 'echo ' + ec2_ssh_username + '  soft  nofile  1000000 | tee -a /etc/security/limits.conf'],
@@ -54,6 +55,7 @@ CLOUD_INIT_DATA ={
         ['sysctl', '-n', '-p'],
     ]
 }
+
 
 def _prepare_user_data():
     '''if cloud-init is enabled, return formatted user-data variable.'''
@@ -112,6 +114,7 @@ def init_cannons():
     print 'Hosts config:', hosts
     return hosts
 
+
 def find_deployed_cannons():
     """Find all cannons deployed for our purposes"""
     ec2_conn = boto.connect_ec2(aws_access_key, aws_secret_key)
@@ -129,10 +132,12 @@ def find_deployed_cannons():
 
     return hosts
 
+
 def destroy_deployed_cannons():
     """Find and destroy all our deployed cannons"""
     hosts = find_deployed_cannons()
     terminate_cannons([h[0] for h in hosts])
+
 
 def terminate_cannons(host_ids):
     """
@@ -140,11 +145,13 @@ def terminate_cannons(host_ids):
     ec2_conn = boto.connect_ec2(aws_access_key, aws_secret_key)
     ec2_conn.terminate_instances(host_ids)
 
+
 def reboot_cannons(host_ids):
     """
     """
     ec2_conn = boto.connect_ec2(aws_access_key, aws_secret_key)
     ec2_conn.reboot_instances(host_ids)
+
 
 def _setup_a_cannon(hostname):
     """Connects to the hostname and installs all the tools required for the
@@ -153,37 +160,30 @@ def _setup_a_cannon(hostname):
     Returns a boolean for successful setup.
     """
     ssh_conn = ssh_connect(hostname)
-    
+
     # copy script to cannon and make it executable
     script_path = env_scripts_dir + '/' + CANNON_INIT_SCRIPT
     put_file(ssh_conn, script_path, CANNON_INIT_SCRIPT)
     response = exec_command(ssh_conn, 'chmod 755 ~/%s' % CANNON_INIT_SCRIPT)
-    if response: # response would be error output
+    if response:  # response would be error output
         print 'Unable to chmod cannon script: %s' % (CANNON_INIT_SCRIPT)
+        print response
+        return False
+
+    # copy the projectile script, for later execution
+    script_path = env_scripts_dir + '/' + CANNON_PROJECTILE_SCRIPT
+    put_file(ssh_conn, script_path, CANNON_PROJECTILE_SCRIPT)
+    response = exec_command(ssh_conn, 'chmod 755 ~/%s' % CANNON_PROJECTILE_SCRIPT)
+    if response:  # response would be error output
+        print 'Unable to chmod projectile script: %s' % (CANNON_PROJECTILE_SCRIPT)
         print response
         return False
 
     # execute the setup script (expect this call to take a while)
     response = exec_command(ssh_conn, 'sudo ./%s' % CANNON_INIT_SCRIPT)
-    return (hostname, response)    
+    print response
+    return (hostname, response)
 
-def _setup_siege_config(hostname):
-    """Connects to the hostname and configures siege
-
-    """
-    ssh_conn = ssh_connect(hostname)
-
-    script_path = env_scripts_dir + '/' + SIEGE_CONFIG
-    put_file(ssh_conn, script_path, '.siegerc')
-
-def _setup_siege_urls(hostname):
-    """Connects to the hostname and configures siege
-
-    """
-    ssh_conn = ssh_connect(hostname)
-
-    script_path = env_scripts_dir + '/' + URLS
-    put_file(ssh_conn, script_path, 'urls.txt')
 
 def setup_cannons(hostnames):
     """Launches a coroutine to configure each host and waits for them to
@@ -197,55 +197,77 @@ def setup_cannons(hostnames):
     print 'Done!'
     return responses
 
-def setup_siege(hostnames):
-    """Launches a coroutine to write a siege config based on user input."""
-    print '  Configuring siege... ',
-    pile = eventlet.GreenPile(pool)
-    for h in hostnames:
-        pile.spawn(_setup_siege_config, h)
-    responses = list(pile)
-    print 'Done!'
-    return responses
+# def _setup_siege_config(hostname):
+#     """Connects to the hostname and configures siege
 
-def setup_siege_urls(hostnames):
-    """Launches a coroutine to write siege urls based on user input."""
-    print '  Configuring urls... ',
-    pile = eventlet.GreenPile(pool)
-    for h in hostnames:
-        pile.spawn(_setup_siege_urls, h)
-    responses = list(pile)
-    print 'Done!'
-    return responses
+#     """
+#     ssh_conn = ssh_connect(hostname)
 
-def fire_cannon(cannon_host, target):
+#     script_path = env_scripts_dir + '/' + SIEGE_CONFIG
+#     put_file(ssh_conn, script_path, '.siegerc')
+
+# def _setup_siege_urls(hostname):
+#     """Connects to the hostname and configures siege
+
+#     """
+#     ssh_conn = ssh_connect(hostname)
+
+#     script_path = env_scripts_dir + '/' + URLS
+#     put_file(ssh_conn, script_path, 'urls.txt')
+
+# def setup_siege(hostnames):
+#     """Launches a coroutine to write a siege config based on user input."""
+#     print '  Configuring siege... ',
+#     pile = eventlet.GreenPile(pool)
+#     for h in hostnames:
+#         pile.spawn(_setup_siege_config, h)
+#     responses = list(pile)
+#     print 'Done!'
+#     return responses
+
+# def setup_siege_urls(hostnames):
+#     """Launches a coroutine to write siege urls based on user input."""
+#     print '  Configuring urls... ',
+#     pile = eventlet.GreenPile(pool)
+#     for h in hostnames:
+#         pile.spawn(_setup_siege_urls, h)
+#     responses = list(pile)
+#     print 'Done!'
+#     return responses
+
+
+def fire_cannon(cannon_host):
     """Handles the details of telling a host to fire"""
     ssh_conn = ssh_connect(cannon_host)
 
-    # check to see if the siege file has been created, if not fire the canon
-    # with some reasonable defaults. os.path.expanduser will return the ec2
-    # user's homedir, most likely /home/ubuntu
-    if os.path.isfile("%s/.siegerc" % (os.path.expanduser('~' + ec2_ssh_username)) ):
-        siege_options = '--rc %s/.siegerc' % (os.path.expanduser('~' + ec2_ssh_username))
-    else:
-        siege_options = '-c200 -t60s'
+    # # check to see if the siege file has been created, if not fire the canon
+    # # with some reasonable defaults. os.path.expanduser will return the ec2
+    # # user's homedir, most likely /home/ubuntu
+    # if os.path.isfile("%s/.siegerc" % (os.path.expanduser('~' + ec2_ssh_username)) ):
+    #     siege_options = '--rc %s/.siegerc' % (os.path.expanduser('~' + ec2_ssh_username))
+    # else:
+    #     siege_options = '-c200 -t60s'
 
-    # run the siege command
-    if target:
-        remote_command = 'siege %s %s' % (siege_options, target)
-    else:
-        remote_command = 'siege %s -f ~/urls.txt' % (siege_options)
+    # # run the siege command
+    # if target:
+    #     remote_command = 'siege %s %s' % (siege_options, target)
+    # else:
+    #     remote_command = 'siege %s -f ~/urls.txt' % (siege_options)
+
+    remote_command = '~/%s' % (CANNON_PROJECTILE_SCRIPT)
 
     # Siege writes stats to stderr
-    response = exec_command(ssh_conn, remote_command, return_stderr=True)
+    response = exec_command(ssh_conn, remote_command)
     return response
 
-def slam_host(cannon_hosts, target):
+
+def slam_host(cannon_hosts):
     """Coordinates `cannon_hosts` to use the specified siege coordates on
     `target` and report back the performance.
     """
     pile = eventlet.GreenPile(pool)
     for h in cannon_hosts:
-        pile.spawn(fire_cannon, h, target)
+        pile.spawn(fire_cannon, h)
     responses = list(pile)
 
     try:
@@ -255,24 +277,25 @@ def slam_host(cannon_hosts, target):
 
     return report
 
+
 def parse_responses(responses):
     """Quick and dirty."""
-    aggregate_dict = {
-        'num_trans': [],
-        'elapsed': [],
-        'tran_rate': [],
-    }
+    # aggregate_dict = {
+    #     'num_trans': [],
+    #     'elapsed': [],
+    #     'tran_rate': [],
+    # }
 
-    for response in responses:
-        try:
-            num_trans = response[4].split('\t')[2].strip()[:-5]
-            elapsed = response[6].split('\t')[2].strip()[:-5]
-            tran_rate = response[9].split('\t')[1].strip()[:-10]
-        except IndexError:
-            raise UnparsableData(response)
+    # for response in responses:
+    #     try:
+    #         num_trans = response[4].split('\t')[2].strip()[:-5]
+    #         elapsed = response[6].split('\t')[2].strip()[:-5]
+    #         tran_rate = response[9].split('\t')[1].strip()[:-10]
+    #     except IndexError:
+    #         raise UnparsableData(response)
 
-        aggregate_dict['num_trans'].append(num_trans)
-        aggregate_dict['elapsed'].append(elapsed)
-        aggregate_dict['tran_rate'].append(tran_rate)
+    #     aggregate_dict['num_trans'].append(num_trans)
+    #     aggregate_dict['elapsed'].append(elapsed)
+    #     aggregate_dict['tran_rate'].append(tran_rate)
 
-    return aggregate_dict
+    return responses[0][0]
