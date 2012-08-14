@@ -5,9 +5,9 @@ them slam a webserver simultaneously. The micro's are effectively
 [Siege](http://www.joedog.org/index/siege-home) cannons.
 
 Siege is a flexible load testing tool. You can configure different payloads and
-frequencies and all kinds of good stuff. So the trick for microarmy is to get
-Siege on a bunch of computers quickly and coordinate the micro instances to work
-in parallel.
+frequencies and all kinds of good stuff. You can also configure different
+scripts to run when the machines are 'fired'. This allows for just about any
+kind of load testing from HTTP to WebSockets.
 
 The micro instances are controlled via SSH in parallel thanks to Eventlet +
 Paramiko.
@@ -79,68 +79,6 @@ This is what it looks like to use microarmy.
 
     microarmy> quit
 
-## Configure siege dynamically
-
-Typically you'd want to configure the siege config in your `local_settings.py` like so...
-
-    siege_config = {
-        'connection': 'close',
-        'concurrency': 5,
-        'internet': 'true'
-    }
-
-If you wish to configure it dynamically...
-
-    microarmy> config_siege
-      Siege config detected in settings and will be automatically deployed with "setup"
-      Continue? (y/n) y
-      Enter siege config data: {'connection': 'close', 'concurrency': 5, 'benchmark': 'true'}
-      Siege config written, deploying to cannons
-      Configuring siege...  Done!
-
-All of the above will write a `~/.siegerc` config on the cannon machines like so:
-
-    connection = close
-    benchmark = true
-    concurrency = 5
-
-## Configure siege urls
-
-Typically you'd want to configure the urls for siege to hit in your `local_settings.py` like so:
-
-    siege_urls = [
-       'http://localhost/',
-       'http://localhost/test'
-    ]
-
-If you wish to configure them dynamically...
-
-    microarmy> siege_urls
-      Urls detected in settings and will be automatically deployed with "setup"
-      Continue? (y/n) y
-      Enter urls: ['http://localhost/', 'http://localhost/test/']
-      Urls written, deploying to cannons
-      Configuring urls...  Done!
-
-All of the above will write `~/urls.txt` on the cannon machines like so:
-
-    http://localhost/
-    http://localhost/test/
-
-## Hit a single url target instead of the configured list
-
-You might want to hit one single url when firing off a test, to do so, don't configure any urls in your `local_settings.py` or...
-
-    microarmy> single_url
-      Bypassing configured urls
-    microarmy> fire
-      target: http://localhost/test_one/
-
-To switch back to your configured urls...
-
-    microarmy> all_urls
-      Using configured urls
-
 ## Find and reuse previously deployed cannons
 
 Sometimes you might forget that you deployed a whole mess of cannons already. In that case, run the following...
@@ -192,13 +130,4 @@ Here is an example:
     key_pair_name = 'micros'
     ec2_ssh_key = '/Users/jd/.ec2/micros.pem'
     num_cannons = 2
-    siege_config = {
-        'connection': 'close',
-        'concurrency': 5,
-        'internet': 'true'
-    }
 
-    siege_urls = [
-       'http://localhost/',
-       'http://localhost/test'
-    ]
