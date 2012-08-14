@@ -1,11 +1,7 @@
 # Micro Army
 
 This is a tool to quickly turn on some number of AWS micro instances and have
-them slam a webserver simultaneously. The micro's are effectively
-[Siege](http://www.joedog.org/index/siege-home) cannons.
-
-Siege is a flexible load testing tool. You can configure different payloads and
-frequencies and all kinds of good stuff. You can also configure different
+them slam a webserver simultaneously. You can configure different
 scripts to run when the machines are 'fired'. This allows for just about any
 kind of load testing from HTTP to WebSockets.
 
@@ -45,10 +41,7 @@ This is what it looks like to use microarmy.
       deploy:       Deploys N cannons
       setup:        Runs the setup functions on each host
       config:       Allows a user to specify existing cannons
-      config_siege: Create siege config from specified dictionary
-      siege_urls:   Specify list of URLS to test against
-      single_url:   Only hit one url when firing off your next test
-      all_urls:     Revert to using configured urls (turns off single_url)
+      find_cannons  Find pre-existing cannons and add them to the artillery
       fire:         Asks for a url and then fires the cannons
       mfire:        Runs `fire` multiple times and aggregates totals
       term:         Terminate cannons
@@ -58,7 +51,7 @@ This is what it looks like to use microarmy.
     Deploying cannons...  Done!
     Hosts config: [(u'i-4c4ff03c', u'ec2-107-21-75-120.compute-1.amazonaws.com'), (u'i-4e4ff03e', u'ec2-50-42-133-31.compute-1.amazonaws.com')]
 
-    microarmy> setup
+    microarmy> setup #run build_cannon.sh on the machines
       Setting up cannons - time: 1317352247.23
       Loading cannons...  Done!
       Siege config written, deploying to cannons
@@ -68,8 +61,7 @@ This is what it looks like to use microarmy.
       Finished setup - time: 1317352305.56
       Sending reboot message to cannons
 
-    microarmy> fire
-      target: http://brubeck.io
+    microarmy> fire #run projectile.sh on the machines
     Results ]------------------
     Num_Trans,Elapsed,Tran_Rate
     3424,9.15,374.21
@@ -121,6 +113,8 @@ following keys. Look at `settings.py` for more information.
 * key_pair_name
 * num_cannons
 * ec2_ssh_key
+* cannon_init_script
+* cannon_projectile_script
 
 Here is an example:
 
@@ -130,4 +124,6 @@ Here is an example:
     key_pair_name = 'micros'
     ec2_ssh_key = '/Users/jd/.ec2/micros.pem'
     num_cannons = 2
+    cannon_init_script = 'build_cannon.sh'
+    cannon_projectile_script = 'projectile.sh'
 
