@@ -8,8 +8,9 @@ kind of load testing from HTTP to WebSockets.
 The micro instances are controlled via SSH in parallel thanks to Eventlet +
 Paramiko.
 
-The micros report the statistics of their run back to the controlling script,
-which then aggregates this data into a CSV.
+The micros report the statistics of their run back to the controlling script. At
+this time, there is no method to "aggregate" statistics. The response is just 
+printed out.
 
 After running the test you can shut down all of your micros and quit micro army.
 
