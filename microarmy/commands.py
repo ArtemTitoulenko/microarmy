@@ -64,6 +64,7 @@ class CommandCenter(cmd.Cmd):
         """Deploy N cannons"""
         start_time = time.time()
         self._cannon_infos = init_cannons()
+
         print 'Time: %s' % (time.time() - start_time)
 
     def do_term(self, line):
@@ -94,6 +95,7 @@ class CommandCenter(cmd.Cmd):
         self._cannon_hosts = [h[1] for h in self._cannon_infos]
         status = setup_cannons(self._cannon_hosts)
 
+
         print status
 
         print 'Finished setup - time: %s' % (time.time() - start_time)
@@ -110,12 +112,6 @@ class CommandCenter(cmd.Cmd):
         for host in self._cannon_infos:
             iid, ihost = [h for h in host]
             print '  Cannon: %s:%s' % (iid, ihost)
-
-        # print '\n  Last written siege config: '
-        # print '  %s' % self._siege_config
-
-        # print '\n  Last written urls: '
-        # print '  %s' % self._siege_urls
 
     def do_config(self, line, cannon_data=None):
         """Allows a user to specify existing cannons"""

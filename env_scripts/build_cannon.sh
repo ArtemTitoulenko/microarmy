@@ -1,19 +1,16 @@
 #!/bin/sh
 
 ### Set up open file descriptor limits
-sudo echo "fs.file-max = 1000000" >> /etc/sysctl.conf
-sudo echo "ubuntu	soft	nofile	1000000" >> /etc/security/limits.conf
-sudo echo "ubuntu	hard	nofile	1000000" >> /etc/security/limits.conf
-
-### Add proper channels for nodejs
-sudo apt-get -y install python-software-properties
-sudo add-apt-repository -y ppa:chris-lea/node.js
+echo "fs.file-max = 1000000" >> /etc/sysctl.conf
+echo "ubuntu	soft	nofile	1000000" >> /etc/security/limits.conf
+echo "ubuntu	hard	nofile	1000000" >> /etc/security/limits.conf
 
 ### Update
-sudo apt-get update
+apt-get update
 
 ### Install
-sudo apt-get -y install \
+apt-get -y install \
+    python-dev \
     build-essential \
     autoconf \
     automake \
@@ -25,4 +22,3 @@ sudo apt-get -y install \
 
 git clone git://gist.github.com/3258447.git && cd 3258447
 npm install
-

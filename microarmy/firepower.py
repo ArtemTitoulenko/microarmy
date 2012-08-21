@@ -197,63 +197,9 @@ def setup_cannons(hostnames):
     print 'Done!'
     return responses
 
-# def _setup_siege_config(hostname):
-#     """Connects to the hostname and configures siege
-
-#     """
-#     ssh_conn = ssh_connect(hostname)
-
-#     script_path = env_scripts_dir + '/' + SIEGE_CONFIG
-#     put_file(ssh_conn, script_path, '.siegerc')
-
-# def _setup_siege_urls(hostname):
-#     """Connects to the hostname and configures siege
-
-#     """
-#     ssh_conn = ssh_connect(hostname)
-
-#     script_path = env_scripts_dir + '/' + URLS
-#     put_file(ssh_conn, script_path, 'urls.txt')
-
-# def setup_siege(hostnames):
-#     """Launches a coroutine to write a siege config based on user input."""
-#     print '  Configuring siege... ',
-#     pile = eventlet.GreenPile(pool)
-#     for h in hostnames:
-#         pile.spawn(_setup_siege_config, h)
-#     responses = list(pile)
-#     print 'Done!'
-#     return responses
-
-# def setup_siege_urls(hostnames):
-#     """Launches a coroutine to write siege urls based on user input."""
-#     print '  Configuring urls... ',
-#     pile = eventlet.GreenPile(pool)
-#     for h in hostnames:
-#         pile.spawn(_setup_siege_urls, h)
-#     responses = list(pile)
-#     print 'Done!'
-#     return responses
-
-
 def fire_cannon(cannon_host):
     """Handles the details of telling a host to fire"""
     ssh_conn = ssh_connect(cannon_host)
-
-    # # check to see if the siege file has been created, if not fire the canon
-    # # with some reasonable defaults. os.path.expanduser will return the ec2
-    # # user's homedir, most likely /home/ubuntu
-    # if os.path.isfile("%s/.siegerc" % (os.path.expanduser('~' + ec2_ssh_username)) ):
-    #     siege_options = '--rc %s/.siegerc' % (os.path.expanduser('~' + ec2_ssh_username))
-    # else:
-    #     siege_options = '-c200 -t60s'
-
-    # # run the siege command
-    # if target:
-    #     remote_command = 'siege %s %s' % (siege_options, target)
-    # else:
-    #     remote_command = 'siege %s -f ~/urls.txt' % (siege_options)
-
     remote_command = '~/%s' % (CANNON_PROJECTILE_SCRIPT)
 
     # Siege writes stats to stderr
@@ -268,6 +214,7 @@ def slam_host(cannon_hosts):
     pile = eventlet.GreenPile(pool)
     for h in cannon_hosts:
         pile.spawn(fire_cannon, h)
+
     responses = list(pile)
 
     try:
@@ -280,6 +227,7 @@ def slam_host(cannon_hosts):
 
 def parse_responses(responses):
     """Quick and dirty."""
+    # There is still no good way to figure out successes. Returning exit statuses maybe?
     # aggregate_dict = {
     #     'num_trans': [],
     #     'elapsed': [],

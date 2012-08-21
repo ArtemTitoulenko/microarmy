@@ -126,4 +126,3 @@ Here is an example:
     num_cannons = 2
     cannon_init_script = 'build_cannon.sh'
     cannon_projectile_script = 'projectile.sh'
-
